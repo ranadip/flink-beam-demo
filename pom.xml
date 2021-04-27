@@ -27,6 +27,7 @@
   <packaging>jar</packaging>
 
   <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <beam.version>2.27.0</beam.version>
 
     <bigquery.version>v2-rev20200719-1.30.10</bigquery.version>
@@ -48,6 +49,8 @@
 <!--    <hadoop.version>2.10.1</hadoop.version>-->
     <maven-surefire-plugin.version>3.0.0-M5</maven-surefire-plugin.version>
     <nemo.version>0.1</nemo.version>
+    <kafka.version>2.7.0</kafka.version>
+
     <flink.artifact.name>beam-runners-flink-1.10</flink.artifact.name>
   </properties>
 
@@ -353,14 +356,14 @@
     <dependency>
       <groupId>org.apache.beam</groupId>
       <artifactId>beam-sdks-java-io-kafka</artifactId>
-      <version>2.27.0</version>
+      <version>${beam.version}</version>
     </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
     <dependency>
       <groupId>org.apache.kafka</groupId>
       <artifactId>kafka-clients</artifactId>
-      <version>2.7.0</version>
+      <version>${kafka.version}</version>
     </dependency>
 
     <!-- Dependencies below this line are specific dependencies needed by the examples code. -->

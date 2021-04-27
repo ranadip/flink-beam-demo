@@ -48,6 +48,7 @@ limitations under the License.
 package com.google.cloud.ranadip.flink.beam.examples;
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.kafka.KafkaIO;
 import org.apache.beam.sdk.options.Default;
@@ -67,6 +68,21 @@ import org.joda.time.Duration;
 import java.io.Serializable;
 
 public class KafkaBeamRedisDemo {
+
+    /**
+     * Filter only "trade" messages (Type = 0)
+     * and BUY messages (i.e. 1. FSYM = BTC and TSYM = USD and F == 2
+     * or 2. FSYM = USD and TSYM = BTC and F == 10 (BUY, with REVERSED symbols)
+     */
+    static class FilterUSDBTCTrades implements ProcessFunction<JsonNode, Boolean> {
+        @Override
+        public Boolean apply(JsonNode node) {
+            return node.getType() == 0 &&
+                    ((node.getFsym().equals("BTC") && node.getTsym().equals("USD") && node.getF() == 2)
+                            ||
+                            (node.getFsym().equals("USD") && node.getTsym().equals("BTC") && node.getF() == 10));
+        }
+    }
 
     public interface KafkaBeamRedisDemoOptions extends PipelineOptions {
 
@@ -161,16 +177,9 @@ public class KafkaBeamRedisDemo {
                     }
                 }));
 
-        /**
-         * Filter only "trade" messages (Type = 0)
-         * and BUY messages (i.e. 1. FSYM = BTC and TSYM = USD and F == 2
-         * or 2. FSYM = USD and TSYM = BTC and F == 10 (BUY, with REVERSED symbols)
-         */
+
         PCollection<JsonNode> filteredValuePcoll =
-                valuePcoll.apply(Filter.by( node -> node.getType() == 0 &&
-                                ((node.getFsym().equals("BTC") && node.getTsym().equals("USD") && node.getF() == 2)
-                                        ||
-                                (node.getFsym().equals("USD") && node.getTsym().equals("BTC") && node.getF() == 10))));
+                valuePcoll.apply(Filter.by(new FilterUSDBTCTrades()));
 
         PCollection<Double> quantityPColl = filteredValuePcoll.apply("Get Volumes",
                 ParDo.of(new DoFn<JsonNode, Double>() {
@@ -214,10 +223,20 @@ public class KafkaBeamRedisDemo {
  * JsonNode is a Java bean representation of the input json
  */
 class JsonNode implements Serializable {
-    int type, f;
-    String m, fsym, tsym;
-    long id, ts, rts, tsns, rtsns;
-    double q, p ,total;
+    @SerializedName("TYPE") int type;
+    @SerializedName("F") int f;
+    @SerializedName("M") String m;
+    @SerializedName("FSYM") String fsym;
+    @SerializedName("TSYM") String tsym;
+    @SerializedName("ID") long id;
+    @SerializedName("TS") long ts;
+    @SerializedName("RTS") long rts;
+    @SerializedName("TSNS") long tsns;
+    @SerializedName("RTSNS") long rtsns;
+    @SerializedName("Q") double q;
+    @SerializedName("P") double p;
+    @SerializedName("TOTAL") double total;
+
     JsonNode() {}
 
     public int getType() {
@@ -244,7 +263,7 @@ class JsonNode implements Serializable {
         return p;
     }
 
-    static JsonNode createJsonNode(String jsonStr) {
+    public  static JsonNode createJsonNode(String jsonStr) {
         Gson gson = new Gson();
         return gson.fromJson(jsonStr, JsonNode.class);
     }
