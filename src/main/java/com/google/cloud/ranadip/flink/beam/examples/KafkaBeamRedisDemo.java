@@ -60,9 +60,10 @@ import org.apache.beam.sdk.transforms.windowing.SlidingWindows;
 import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.KV;
 import org.apache.beam.sdk.values.PCollection;
-import org.apache.kafka.common.serialization.DoubleSerializer;
+import org.apache.beam.sdk.values.TypeDescriptor;
 import org.apache.kafka.common.serialization.LongDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.joda.time.Duration;
 
 import java.io.Serializable;
@@ -116,21 +117,6 @@ public class KafkaBeamRedisDemo {
         // in its dependencies.
         KafkaBeamRedisDemoOptions options = PipelineOptionsFactory.fromArgs(args)
                 .withValidation().as(KafkaBeamRedisDemoOptions.class);
-
-        // In order to run your pipeline, you need to make following runner specific changes:
-        //
-        // CHANGE 1/3: Select a Beam runner, such as BlockingDataflowRunner
-        // or FlinkRunner.
-        // CHANGE 2/3: Specify runner-required options.
-        // For BlockingDataflowRunner, set project and temp location as follows:
-        //   DataflowPipelineOptions dataflowOptions = options.as(DataflowPipelineOptions.class);
-        //   dataflowOptions.setRunner(BlockingDataflowRunner.class);
-        //   dataflowOptions.setProject("SET_YOUR_PROJECT_ID_HERE");
-        //   dataflowOptions.setTempLocation("gs://SET_YOUR_BUCKET_NAME_HERE/AND_TEMP_DIRECTORY");
-        // For FlinkRunner, set the runner as follows. See {@code FlinkPipelineOptions}
-        // for more details.
-        //   options.as(FlinkPipelineOptions.class)
-        //      .setRunner(FlinkRunner.class);
 
         // Create the Pipeline object with the options we defined above
         Pipeline p = Pipeline.create(options);
@@ -199,19 +185,23 @@ public class KafkaBeamRedisDemo {
 
         PCollection<Double> maxPricePerWindow = pricePColl.apply("Max Price", Max.<Double>globally().withoutDefaults());
 
-//        valuePcoll.apply("Write Output", TextIO.write().to("tmpOutput"));
+//        maxPricePerWindow.apply("Write Output", TextIO.write().to("tmpOutput"));
 
-        avgVolPerWindow.apply("Write Avg vol to Kafka", KafkaIO.<Void, Double>write()
+        avgVolPerWindow.apply("Convert AvgVol to String", MapElements.into(TypeDescriptor.of(String.class))
+                .via(x -> x.toString()))
+                .apply("Write Avg vol to Kafka", KafkaIO.<Void, String>write()
                 .withBootstrapServers(options.getKafkaBrokerString())
                 .withTopic("AvgVol")
-                .withValueSerializer(DoubleSerializer.class)
+                .withValueSerializer(StringSerializer.class)
                 .values()
         );
 
-        maxPricePerWindow.apply("Write Max price to Kafka", KafkaIO.<Void, Double>write()
+        maxPricePerWindow.apply("Convert MaxPrice to String", MapElements.into(TypeDescriptor.of(String.class))
+                .via(x -> x.toString()))
+                .apply("Write Max price to Kafka", KafkaIO.<Void, String>write()
                 .withBootstrapServers(options.getKafkaBrokerString())
                 .withTopic("MaxPrice")
-                .withValueSerializer(DoubleSerializer.class)
+                .withValueSerializer(StringSerializer.class)
                 .values()
         );
 
@@ -268,40 +258,3 @@ class JsonNode implements Serializable {
         return gson.fromJson(jsonStr, JsonNode.class);
     }
 }
-
-//
-///**
-// *  AverageVolPerTradeFn class implements methods required for the combine functions to
-// *  calculate the average traded volumes in the provided window
-// */
-//class AverageVolPerTradeFn extends Combine.CombineFn<Double, AverageVolPerTradeFn.Accum, Double> {
-//    public static class Accum {
-//        double sum = 0;
-//        double count = 0;
-//    }
-//
-//    @Override
-//    public Accum createAccumulator() { return new Accum(); }
-//
-//    @Override
-//    public Accum addInput(Accum accum, Double input) {
-//        accum.sum += input;
-//        accum.count++;
-//        return accum;
-//    }
-//
-//    @Override
-//    public Accum mergeAccumulators(Iterable<Accum> accums) {
-//        Accum merged = createAccumulator();
-//        for (Accum accum : accums) {
-//            merged.sum += accum.sum;
-//            merged.count += accum.count;
-//        }
-//        return merged;
-//    }
-//
-//    @Override
-//    public Double extractOutput(Accum accum) {
-//        return ((double) accum.sum) / accum.count;
-//    }
-//}
