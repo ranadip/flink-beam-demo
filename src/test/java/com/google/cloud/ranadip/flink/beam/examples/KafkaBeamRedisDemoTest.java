@@ -39,8 +39,8 @@ public class KafkaBeamRedisDemoTest {
     public void FilterTest() throws Exception {
 
         final String[] JsonArray = new String[] {
-                "{\"TYPE\":\"0\",\"M\":\"Coinbase\",\"FSYM\":\"BTC\",\"TSYM\":\"USD\",\"F\":\"1\",\"ID\":\"155073841\",\"TS\":1618335982,\"Q\":0.0001,\"P\":63240,\"TOTAL\":6.324,\"RTS\":1618335983,\"TSNS\":414000000,\"RTSNS\":615000000}",
-                "{\"TYPE\":\"0\",\"M\":\"Coinbase\",\"FSYM\":\"BTC\",\"TSYM\":\"USD\",\"F\":\"1\",\"ID\":\"155073843\",\"TS\":1618335983,\"Q\":0.00480162,\"P\":63239.88,\"TOTAL\":303.6538726056,\"RTS\":1618335983,\"TSNS\":471000000,\"RTSNS\":615000000}",
+                "{\"TYPE\":\"0\",\"M\":\"Coinbase\",\"FSYM\":\"BTC\",\"TSYM\":\"USD\",\"F\":\"2\",\"ID\":\"155073841\",\"TS\":1618335982,\"Q\":0.0001,\"P\":63240,\"TOTAL\":6.324,\"RTS\":1618335983,\"TSNS\":414000000,\"RTSNS\":615000000}",
+                "{\"TYPE\":\"0\",\"M\":\"Coinbase\",\"FSYM\":\"USD\",\"TSYM\":\"BTC\",\"F\":\"10\",\"ID\":\"155073843\",\"TS\":1618335983,\"Q\":0.00480162,\"P\":63239.88,\"TOTAL\":303.6538726056,\"RTS\":1618335983,\"TSNS\":471000000,\"RTSNS\":615000000}",
                 "{\"TYPE\":\"16\",\"MESSAGE\":\"SUBSCRIBECOMPLETE\",\"SUB\":\"0~Coinbase~BTC~USD\"}",
                 "{\"TYPE\":\"3\",\"MESSAGE\":\"LOADCOMPLETE\",\"INFO\":\"All your valid subs have been loaded.\"}"
         };
@@ -54,7 +54,7 @@ public class KafkaBeamRedisDemoTest {
         PCollection<String> output = filterInput.apply(ParDo.of(new ParGetFsym()));
         output.setCoder(NullableCoder.of(StringUtf8Coder.of()));
         PAssert.that(output)
-                .containsInAnyOrder("BTC", "BTC");
+                .containsInAnyOrder("BTC", "USD");
 
         // Run the pipeline.
         testPipeline.run();
